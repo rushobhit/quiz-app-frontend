@@ -28,10 +28,11 @@ export default function QuizCard({
       >
         {options.map((option, index) => {
           const isSelected = selectedAnswer === option;
+          const optionId = `${option}-${index}`;
 
           return (
             <button
-              key={`${option}-${index}`}
+              key={optionId}
               type="button"
               role="radio"
               aria-checked={isSelected}

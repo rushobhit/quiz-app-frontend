@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../quizApi"; // <-- use shared Axios instance
 
 export default function StudentSignupPage() {
   const navigate = useNavigate();
@@ -64,7 +64,8 @@ export default function StudentSignupPage() {
       setError("");
       setSuccessMessage("");
 
-      await axios.post("/api/auth/send-student-signup-otp", {
+      // hits: https://quizmicroservice.onrender.com/api/auth/send-student-signup-otp
+      await api.post("/auth/send-student-signup-otp", {
         email: normalizedEmail,
       });
 
@@ -94,7 +95,8 @@ export default function StudentSignupPage() {
       setError("");
       setSuccessMessage("");
 
-      await axios.post("/api/auth/verify-student-signup-otp", {
+      // hits: https://quizmicroservice.onrender.com/api/auth/verify-student-signup-otp
+      await api.post("/auth/verify-student-signup-otp", {
         email: normalizedEmail,
         otp: trimmedOtp,
       });

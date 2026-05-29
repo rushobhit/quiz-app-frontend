@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../quizApi"; // use shared Axios instance
 
 export default function EnterDetailsPage() {
   const navigate = useNavigate();
@@ -90,7 +90,8 @@ export default function EnterDetailsPage() {
       setError("");
       setSuccessMessage("");
 
-      await axios.post("/api/auth/student/signup-details", {
+      // hits: https://quizmicroservice.onrender.com/api/auth/student/signup-details
+      await api.post("/auth/student/signup-details", {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         username: formData.username.trim(),
@@ -114,6 +115,7 @@ export default function EnterDetailsPage() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="auth-page">

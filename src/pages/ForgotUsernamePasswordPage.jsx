@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import api from "../quizApi"; // use shared Axios instance
 
 export default function ForgotUsernamePasswordPage() {
   const [recoveryType, setRecoveryType] = useState("password");
@@ -47,12 +47,14 @@ export default function ForgotUsernamePasswordPage() {
       setSuccessMessage("");
 
       if (recoveryType === "username") {
-        await axios.post("/api/auth/forgot-username", { email: trimmedEmail });
+        // https://quizmicroservice.onrender.com/api/auth/forgot-username
+        await api.post("/auth/forgot-username", { email: trimmedEmail });
         setSuccessMessage(
           "If an account exists with this email, your username has been sent to your Gmail."
         );
       } else {
-        await axios.post("/api/auth/forgot-password", { email: trimmedEmail });
+        // https://quizmicroservice.onrender.com/api/auth/forgot-password
+        await api.post("/auth/forgot-password", { email: trimmedEmail });
         setSuccessMessage(
           "If an account exists with this email, a password reset link has been sent to your Gmail."
         );

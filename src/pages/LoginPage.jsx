@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 import Header from "../components/Header";
+import api from "../quizApi"; // <-- use your configured Axios instance
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -70,7 +70,9 @@ export default function LoginPage() {
       setLoading(true);
       setError("");
 
-      const response = await axios.post("/api/auth/login", {
+      // use shared Axios client; this hits
+      // https://quizmicroservice.onrender.com/api/auth/login
+      const response = await api.post("/auth/login", {
         email: formData.email,
         password: formData.password,
         role: formData.loginAs.toUpperCase(), // "ADMIN" or "STUDENT"

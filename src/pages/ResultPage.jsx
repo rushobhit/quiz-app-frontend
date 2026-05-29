@@ -29,6 +29,7 @@ export default function ResultPage() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("role");
     navigate("/login", { replace: true });
   };
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
+import api from "../quizApi"; // <-- use shared Axios instance
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -62,9 +62,10 @@ export default function ResetPasswordPage() {
       setError("");
       setSuccessMessage("");
 
-      await axios.post("/api/auth/reset-password", {
+      // hits: https://quizmicroservice.onrender.com/api/auth/reset-password
+      await api.post("/auth/reset-password", {
         token,
-        newPassword: formData.password, // IMPORTANT: matches ResetPasswordRequest
+        newPassword: formData.password,
       });
 
       setSuccessMessage(

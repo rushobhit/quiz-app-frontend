@@ -8,6 +8,7 @@ export default function ResultCard({
   onLogout,
 }) {
   const { theme } = useTheme();
+
   const safeTotal = total > 0 ? total : 1;
   const safeScore = Math.min(Math.max(score, 0), safeTotal);
   const percentage = Math.round((safeScore / safeTotal) * 100);

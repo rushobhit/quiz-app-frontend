@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../quizApi";
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
@@ -12,7 +12,7 @@ export default function AdminDashboardPage() {
   const [questionsError, setQuestionsError] = useState("");
   const [resultsError, setResultsError] = useState("");
 
-  const loadAdminData = async () => {
+  const loadAdminData = useCallback(async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -32,8 +32,8 @@ export default function AdminDashboardPage() {
       };
 
       const [questionsRes, resultsRes] = await Promise.allSettled([
-        axios.get("/api/admin/questions", config),
-        axios.get("/api/admin/student-results", config),
+        api.get("/admin/questions", config),
+        api.get("/admin/student-results", config),
       ]);
 
       if (questionsRes.status === "fulfilled") {
@@ -58,11 +58,11 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     loadAdminData();
-  }, []);
+  }, [loadAdminData]);
 
   const handleQuestionChange = (questionIndex, field, value) => {
     setQuestions((prev) =>
@@ -102,7 +102,6 @@ export default function AdminDashboardPage() {
         },
       };
 
-      // backend QuestionRequest expects: question, options, correctAnswer, category
       const payload = {
         question: question.question,
         options: question.options,
@@ -110,7 +109,11 @@ export default function AdminDashboardPage() {
         category: question.category,
       };
 
-      await axios.put(`/api/admin/questions/${question.id ?? index}`, payload, config);
+      await api.put(
+        `/admin/questions/${question.id ?? index}`,
+        payload,
+        config
+      );
       alert("Question updated successfully.");
     } catch (err) {
       alert(

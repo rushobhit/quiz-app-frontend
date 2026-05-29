@@ -2,19 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- use relative path so it works under /quiz-app-frontend/ -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
       content="Quiz App helps students practice topics, attempt quizzes, and review their results through a simple learning flow."
     />
     <meta name="theme-color" content="#01696f" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171614" />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#171614"
+    />
     <title>Quiz App</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <!-- also use relative path here; Vite + base will rewrite correctly -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
