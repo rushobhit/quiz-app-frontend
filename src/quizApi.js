@@ -39,7 +39,7 @@ api.interceptors.response.use(
 
 	if (status === 401) {
 	  clearAuth();
-	  window.location.href = "/login";
+	  window.location.hash = "#/login";
 	}
 
     return Promise.reject(error);
