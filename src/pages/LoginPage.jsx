@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-import api from "../quizApi"; // <-- use your configured Axios instance
+import api from "../quizApi";
 
 export default function LoginPage() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     loginAs: "",
-    email: "",
+    identifier: "",
     password: "",
   });
 
@@ -17,6 +17,11 @@ export default function LoginPage() {
 
   const hasSelectedRole =
     formData.loginAs === "admin" || formData.loginAs === "student";
+
+  const isEmail = (value) => {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailPattern.test(value.trim());
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,7 +39,7 @@ export default function LoginPage() {
 
     setFormData({
       loginAs: value,
-      email: "",
+      identifier: "",
       password: "",
     });
 
@@ -47,18 +52,34 @@ export default function LoginPage() {
       return false;
     }
 
-    if (!formData.email.trim() || !formData.password.trim()) {
-      setError("Email and password are required.");
+    if (!formData.identifier.trim() || !formData.password.trim()) {
+      setError("Email/username and password are required.");
       return false;
     }
 
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(formData.email)) {
+    const identifier = formData.identifier.trim();
+
+    if (identifier.includes("@") && !isEmail(identifier)) {
       setError("Please enter a valid email address.");
       return false;
     }
 
     return true;
+  };
+
+  const sendLoginLog = async (user, role) => {
+    try {
+      const deviceInfo = navigator.userAgent || "Unknown device";
+
+      await api.post("/auth/login-log", {
+        userId: user.id,
+        fullName: user.fullName,
+        role,
+        deviceInfo,
+      });
+    } catch (error) {
+      console.error("Login log failed", error);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -70,12 +91,12 @@ export default function LoginPage() {
       setLoading(true);
       setError("");
 
-      // use shared Axios client; this hits
-      // https://quizmicroservice.onrender.com/api/auth/login
+      const trimmedIdentifier = formData.identifier.trim();
+
       const response = await api.post("/auth/login", {
-        email: formData.email,
+        emailOrUsername: trimmedIdentifier,
         password: formData.password,
-        role: formData.loginAs.toUpperCase(), // "ADMIN" or "STUDENT"
+        role: formData.loginAs.toUpperCase(),
       });
 
       const data = response.data;
@@ -92,15 +113,20 @@ export default function LoginPage() {
         localStorage.setItem("role", data.role);
       }
 
+      if (data?.user) {
+        const effectiveRole = data.role || formData.loginAs.toUpperCase();
+        sendLoginLog(data.user, effectiveRole);
+      }
+
       const isAdmin =
         formData.loginAs === "admin" ||
-        data.role === "ADMIN" ||
-        data.role === "ROLE_ADMIN";
+        data?.role === "ADMIN" ||
+        data?.role === "ROLE_ADMIN";
 
       if (isAdmin) {
         navigate("/admin", { replace: true });
       } else {
-        navigate("/", { replace: true });
+        navigate("/select-quiz", { replace: true });
       }
     } catch (err) {
       setError(
@@ -142,17 +168,18 @@ export default function LoginPage() {
             {hasSelectedRole && (
               <>
                 <label className="field">
-                  <span>Email address</span>
+                  <span>Email or Username</span>
                   <input
-                    type="email"
-                    name="email"
+                    type="text"
+                    name="identifier"
                     placeholder={
                       formData.loginAs === "admin"
-                        ? "Enter admin email"
-                        : "Enter student email"
+                        ? "Enter admin email or username"
+                        : "Enter student email or username"
                     }
-                    value={formData.email}
+                    value={formData.identifier}
                     onChange={handleChange}
+                    autoComplete="username"
                   />
                 </label>
 
@@ -168,11 +195,13 @@ export default function LoginPage() {
                     }
                     value={formData.password}
                     onChange={handleChange}
+                    autoComplete="current-password"
                   />
                 </label>
 
                 <button
                   className="primary-btn"
+				  id="login-btn"
                   type="submit"
                   disabled={loading}
                 >
@@ -189,10 +218,6 @@ export default function LoginPage() {
           </form>
 
           <div className="auth-links">
-            <Link to="/forgot-account" className="auth-link">
-              Forgot username or password?
-            </Link>
-
             {formData.loginAs === "student" && (
               <p>
                 Don&apos;t have a student account?{" "}

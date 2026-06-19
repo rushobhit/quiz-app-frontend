@@ -1,20 +1,56 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../quizApi";
+import {
+  getAdminQuestions,
+  getStudentResults,
+  getAdminLogs,
+  getAllStudents,
+} from "../quizApi";
+import { clearAuth } from "../utils/authStorage";
+import QuestionPanel from "../admin/QuestionPanel";
+import ResultPanel from "../admin/ResultPanel";
+import LogsPanel from "../admin/LogsPanel";
+import StudentsPanel from "../admin/StudentsPanel";
+
+const PAGE_SIZE = 20;
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
+  
+  
+
+  const [activeTab, setActiveTab] = useState("questions");
 
   const [questions, setQuestions] = useState([]);
-  const [results, setResults] = useState([]);
-  const [activeTab, setActiveTab] = useState("questions");
-  const [loading, setLoading] = useState(false);
   const [questionsError, setQuestionsError] = useState("");
+  const [questionSearch, setQuestionSearch] = useState("");
+
+  const [results, setResults] = useState([]);
   const [resultsError, setResultsError] = useState("");
 
-  const loadAdminData = useCallback(async () => {
-    const token = localStorage.getItem("token");
+  const [logs, setLogs] = useState([]);
+  const [logsError, setLogsError] = useState("");
 
+  const [students, setStudents] = useState([]);
+  const [studentsError, setStudentsError] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  
+  const [questionsPage, setQuestionsPage] = useState(0);
+  const [questionsTotalPages, setQuestionsTotalPages] = useState(0);
+
+  const [resultsPage, setResultsPage] = useState(0);
+  const [resultsTotalPages, setResultsTotalPages] = useState(0);
+
+  const [logsPage, setLogsPage] = useState(0);
+  const [logsTotalPages, setLogsTotalPages] = useState(0);
+
+  const [studentsPage, setStudentsPage] = useState(0);
+  const [studentsTotalPages, setStudentsTotalPages] = useState(0);
+
+
+  const loadAdminData = useCallback(async (search = questionSearch) => {
+    const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login", { replace: true });
       return;
@@ -24,110 +60,113 @@ export default function AdminDashboardPage() {
       setLoading(true);
       setQuestionsError("");
       setResultsError("");
+      setLogsError("");
+      setStudentsError("");
 
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
-      const [questionsRes, resultsRes] = await Promise.allSettled([
-        api.get("/admin/questions", config),
-        api.get("/admin/student-results", config),
+      const [qRes, rRes, lRes, sRes] = await Promise.allSettled([
+		getAdminQuestions({
+		  page: questionsPage,
+		  size: PAGE_SIZE,
+		  search
+		}),
+		getStudentResults({
+		  page: resultsPage,
+		  size: PAGE_SIZE,
+		}),
+		getAdminLogs({
+		  page: logsPage,
+		  size: PAGE_SIZE,
+		}),
+		getAllStudents({
+		  page: studentsPage,
+		  size: PAGE_SIZE,
+		}),
       ]);
 
-      if (questionsRes.status === "fulfilled") {
-        setQuestions(questionsRes.value.data || []);
+      if (qRes.status === "fulfilled") {
+		const pageData = qRes.value.data.data;
+
+		setQuestions(pageData.content || []);
+		setQuestionsTotalPages(
+		  pageData.totalPages || 0
+		);
       } else {
+		setQuestionsTotalPages(0);
+		
         setQuestions([]);
         setQuestionsError(
-          questionsRes.reason?.response?.data?.message ||
-            "Unable to load questions."
+          qRes.reason?.response?.data?.message || "Unable to load questions."
         );
       }
 
-      if (resultsRes.status === "fulfilled") {
-        setResults(resultsRes.value.data || []);
+      if (rRes.status === "fulfilled") {
+		const pageData = rRes.value.data.data;
+
+		setResults(pageData.content || []);
+		setResultsTotalPages(
+		  pageData.totalPages || 0
+		);
       } else {
+		setResultsTotalPages(0);
         setResults([]);
         setResultsError(
-          resultsRes.reason?.response?.data?.message ||
-            "Unable to load student results."
+          rRes.reason?.response?.data?.message || "Unable to load results."
+        );
+      }
+
+      if (lRes.status === "fulfilled") {
+		const pageData = lRes.value.data.data;
+
+		setLogs(pageData.content || []);
+		setLogsTotalPages(
+		  pageData.totalPages || 0
+		);
+      } else {
+		setLogsTotalPages(0);
+        setLogs([]);
+        setLogsError(
+          lRes.reason?.response?.data?.message || "Unable to load logs."
+        );
+      }
+
+	  if (sRes.status === "fulfilled") {
+	    const pageData = sRes.value.data.data;
+
+	    setStudents(pageData.content || []);
+	    setStudentsTotalPages(
+	      pageData.totalPages || 0
+	    );
+	  } else {
+	setStudentsTotalPages(0);
+        setStudents([]);
+        setStudentsError(
+          sRes.reason?.response?.data?.message || "Unable to load students."
         );
       }
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+	}, [
+	  navigate,
+	  questionsPage,
+	  resultsPage,
+	  logsPage,
+	  studentsPage,
+	  questionSearch,
+	]);
 
-  useEffect(() => {
-    loadAdminData();
-  }, [loadAdminData]);
+	useEffect(() => {
+	  const timeout = setTimeout(() => {
+	    loadAdminData(questionSearch);
+	  }, 800);
 
-  const handleQuestionChange = (questionIndex, field, value) => {
-    setQuestions((prev) =>
-      prev.map((question, index) =>
-        index === questionIndex ? { ...question, [field]: value } : question
-      )
-    );
-  };
+	  return () => clearTimeout(timeout);
+	}, [questionSearch, loadAdminData]);
 
-  const handleOptionChange = (questionIndex, optionIndex, value) => {
-    setQuestions((prev) =>
-      prev.map((question, index) =>
-        index === questionIndex
-          ? {
-              ...question,
-              options: (question.options || []).map((option, i) =>
-                i === optionIndex ? value : option
-              ),
-            }
-          : question
-      )
-    );
-  };
-
-  const handleSaveQuestion = async (question, index) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
-    try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
-      const payload = {
-        question: question.question,
-        options: question.options,
-        correctAnswer: question.correctAnswer,
-        category: question.category,
-      };
-
-      await api.put(
-        `/admin/questions/${question.id ?? index}`,
-        payload,
-        config
-      );
-      alert("Question updated successfully.");
-    } catch (err) {
-      alert(
-        err?.response?.data?.message || "Failed to update question."
-      );
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("role");
-    navigate("/login", { replace: true });
-  };
+	const handleLogout = () => {
+	  clearAuth();
+	  navigate("/login", { replace: true });
+	};
 
   return (
     <div className="admin-page">
@@ -135,7 +174,7 @@ export default function AdminDashboardPage() {
         <div>
           <h1>Admin Dashboard</h1>
           <p className="admin-subtitle">
-            Manage quiz questions and review student results.
+            Manage questions, students, results and activity logs.
           </p>
         </div>
 
@@ -145,7 +184,7 @@ export default function AdminDashboardPage() {
             className={activeTab === "questions" ? "primary-btn" : "secondary-btn"}
             onClick={() => setActiveTab("questions")}
           >
-            Manage Questions
+            Questions
           </button>
 
           <button
@@ -153,7 +192,23 @@ export default function AdminDashboardPage() {
             className={activeTab === "results" ? "primary-btn" : "secondary-btn"}
             onClick={() => setActiveTab("results")}
           >
-            Student Results
+            Results
+          </button>
+
+          <button
+            type="button"
+            className={activeTab === "students" ? "primary-btn" : "secondary-btn"}
+            onClick={() => setActiveTab("students")}
+          >
+            Students
+          </button>
+
+          <button
+            type="button"
+            className={activeTab === "logs" ? "primary-btn" : "secondary-btn"}
+            onClick={() => setActiveTab("logs")}
+          >
+            Logs
           </button>
 
           <button
@@ -174,137 +229,55 @@ export default function AdminDashboardPage() {
       {loading && <p>Loading admin data...</p>}
 
       {activeTab === "questions" && (
-        <div className="admin-section">
-          <h2>Edit Questions</h2>
-
-          {questionsError && <div className="error-box">{questionsError}</div>}
-
-          {!questionsError && questions.length === 0 && !loading && (
-            <div className="admin-card">
-              <p>No questions found.</p>
-            </div>
-          )}
-
-          {questions.map((question, questionIndex) => (
-            <div className="admin-card" key={question.id ?? questionIndex}>
-              <label className="field">
-                <span>Question</span>
-                <input
-                  type="text"
-                  value={question.question || ""}
-                  onChange={(e) =>
-                    handleQuestionChange(
-                      questionIndex,
-                      "question",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              {(question.options || []).map((option, optionIndex) => (
-                <label className="field" key={optionIndex}>
-                  <span>Option {optionIndex + 1}</span>
-                  <input
-                    type="text"
-                    value={option}
-                    onChange={(e) =>
-                      handleOptionChange(
-                        questionIndex,
-                        optionIndex,
-                        e.target.value
-                      )
-                    }
-                  />
-                </label>
-              ))}
-
-              <label className="field">
-                <span>Correct Answer</span>
-                <input
-                  type="text"
-                  value={question.correctAnswer || ""}
-                  onChange={(e) =>
-                    handleQuestionChange(
-                      questionIndex,
-                      "correctAnswer",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label className="field">
-                <span>Category</span>
-                <input
-                  type="text"
-                  value={question.category || ""}
-                  onChange={(e) =>
-                    handleQuestionChange(
-                      questionIndex,
-                      "category",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <button
-                className="primary-btn"
-                type="button"
-                onClick={() => handleSaveQuestion(question, questionIndex)}
-              >
-                Save Changes
-              </button>
-            </div>
-          ))}
-        </div>
+		<QuestionPanel
+		  questions={questions}
+		  setQuestions={setQuestions}
+		  error={questionsError}
+		  loading={loading}
+		  onRefresh={loadAdminData}
+		  page={questionsPage}
+		  setPage={setQuestionsPage}
+		  totalPages={questionsTotalPages}
+		  search={questionSearch}
+		  setSearch={setQuestionSearch}
+		/>
       )}
 
       {activeTab === "results" && (
-        <div className="admin-section">
-          <h2>Student Results</h2>
+		<ResultPanel
+		  results={results}
+		  setResults={setResults}
+		  error={resultsError}
+		  loading={loading}
+		  onRefresh={loadAdminData}
+		  page={resultsPage}
+		  setPage={setResultsPage}
+		  totalPages={resultsTotalPages}
+		/>
+      )}
 
-          {resultsError && <div className="error-box">{resultsError}</div>}
+      {activeTab === "students" && (
+		<StudentsPanel
+		  students={students}
+		  setStudents={setStudents}
+		  error={studentsError}
+		  loading={loading}
+		  onRefresh={loadAdminData}
+		  page={studentsPage}
+		  setPage={setStudentsPage}
+		  totalPages={studentsTotalPages}
+		/>
+      )}
 
-          <div className="table-wrap">
-            <table className="results-table">
-              <thead>
-                <tr>
-                  <th>Student Name</th>
-                  <th>Email</th>
-                  <th>Quiz Title</th>
-                  <th>Score</th>
-                  <th>Total</th>
-                  <th>Percentage</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {results.length > 0 ? (
-                  results.map((row, index) => (
-                    <tr key={row.id ?? index}>
-                      <td>{row.studentName}</td>
-                      <td>{row.email}</td>
-                      <td>{row.quizTitle}</td>
-                      <td>{row.score}</td>
-                      <td>{row.total}</td>
-                      <td>{row.percentage}%</td>
-                      <td>{row.submittedAt}</td>
-                    </tr>
-                  ))
-                ) : (
-                  !resultsError && !loading && (
-                    <tr>
-                      <td colSpan="7">No student results found.</td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {activeTab === "logs" && (
+		<LogsPanel
+		  logs={logs}
+		  error={logsError}
+		  loading={loading}
+		  page={logsPage}
+		  setPage={setLogsPage}
+		  totalPages={logsTotalPages}
+		/>
       )}
     </div>
   );

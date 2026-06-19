@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import api from "../quizApi"; // use shared Axios instance
+import api from "../quizApi";
 
 export default function EnterDetailsPage() {
   const navigate = useNavigate();
@@ -16,6 +16,21 @@ export default function EnterDetailsPage() {
     email: verifiedEmail,
     password: "",
     confirmPassword: "",
+    fatherName: "",
+    motherName: "",
+    dob: "",
+    institute: "",
+    currentAddressLine1: "",
+    currentAddressLine2: "",
+    currentCity: "",
+    currentState: "",
+    currentPincode: "",
+    permanentAddressLine1: "",
+    permanentAddressLine2: "",
+    permanentCity: "",
+    permanentState: "",
+    permanentPincode: "",
+    sameAsCurrent: false,
   });
 
   const [error, setError] = useState("");
@@ -29,50 +44,120 @@ export default function EnterDetailsPage() {
   }, [isVerified, verifiedEmail, navigate]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      if (name === "sameAsCurrent") {
+        const next = {
+          ...prev,
+          sameAsCurrent: checked,
+        };
+
+        if (checked) {
+          next.permanentAddressLine1 = prev.currentAddressLine1;
+          next.permanentAddressLine2 = prev.currentAddressLine2;
+          next.permanentCity = prev.currentCity;
+          next.permanentState = prev.currentState;
+          next.permanentPincode = prev.currentPincode;
+        }
+
+        return next;
+      }
+
+      let nextValue = type === "checkbox" ? checked : value;
+
+      if (name === "username") {
+        nextValue = value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20);
+      }
+
+      const next = {
+        ...prev,
+        [name]: nextValue,
+      };
+
+      if (prev.sameAsCurrent) {
+        if (name.startsWith("current")) {
+          const fieldSuffix = name.replace("current", "");
+          next["permanent" + fieldSuffix] = value;
+        }
+      }
+
+      return next;
+    });
 
     setError("");
     setSuccessMessage("");
   };
 
   const validateForm = () => {
-    const trimmedFirstName = formData.firstName.trim();
-    const trimmedUsername = formData.username.trim();
-    const trimmedEmail = formData.email.trim();
+    const {
+      firstName,
+      username,
+      email,
+      password,
+      confirmPassword,
+      fatherName,
+      motherName,
+      dob,
+      institute,
+      currentAddressLine1,
+      currentCity,
+      currentState,
+      currentPincode,
+      permanentAddressLine1,
+      permanentCity,
+      permanentState,
+      permanentPincode,
+    } = formData;
 
     if (
-      !trimmedFirstName ||
-      !trimmedUsername ||
-      !trimmedEmail ||
-      !formData.password.trim() ||
-      !formData.confirmPassword.trim()
+      !firstName.trim() ||
+      !username.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim() ||
+      !fatherName.trim() ||
+      !motherName.trim() ||
+      !dob.trim() ||
+      !institute.trim() ||
+      !currentAddressLine1.trim() ||
+      !currentCity.trim() ||
+      !currentState.trim() ||
+      !currentPincode.trim() ||
+      !permanentAddressLine1.trim() ||
+      !permanentCity.trim() ||
+      !permanentState.trim() ||
+      !permanentPincode.trim()
     ) {
       setError("Please fill in all required fields.");
       return false;
     }
 
+    const usernamePattern = /^[A-Za-z0-9_]{4,20}$/;
+    if (!usernamePattern.test(username.trim())) {
+      setError(
+        "Username must be 4 to 20 characters long and can contain only letters, numbers, and underscore."
+      );
+      return false;
+    }
+
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(trimmedEmail)) {
+    if (!emailPattern.test(email.trim())) {
       setError("Please enter a valid email address.");
       return false;
     }
 
-    if (trimmedEmail !== verifiedEmail.trim()) {
+    if (email.trim() !== verifiedEmail.trim()) {
       setError("Email cannot be changed after verification.");
       return false;
     }
 
-    if (formData.password.length < 8) {
+    if (password.length < 8) {
       setError("Password must be at least 8 characters long.");
       return false;
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return false;
     }
@@ -90,13 +175,30 @@ export default function EnterDetailsPage() {
       setError("");
       setSuccessMessage("");
 
-      // hits: https://quizmicroservice.onrender.com/api/auth/student/signup-details
       await api.post("/auth/student/signup-details", {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         username: formData.username.trim(),
         email: formData.email.trim(),
         password: formData.password,
+        fatherName: formData.fatherName.trim(),
+        motherName: formData.motherName.trim(),
+        dob: formData.dob,
+        institute: formData.institute.trim(),
+        currentAddress: {
+          line1: formData.currentAddressLine1.trim(),
+          line2: formData.currentAddressLine2.trim(),
+          city: formData.currentCity.trim(),
+          state: formData.currentState.trim(),
+          pincode: formData.currentPincode.trim(),
+        },
+        permanentAddress: {
+          line1: formData.permanentAddressLine1.trim(),
+          line2: formData.permanentAddressLine2.trim(),
+          city: formData.permanentCity.trim(),
+          state: formData.permanentState.trim(),
+          pincode: formData.permanentPincode.trim(),
+        },
       });
 
       setSuccessMessage(
@@ -115,7 +217,6 @@ export default function EnterDetailsPage() {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="auth-page">
@@ -162,6 +263,10 @@ export default function EnterDetailsPage() {
               value={formData.username}
               onChange={handleChange}
               autoComplete="username"
+              minLength={4}
+              maxLength={20}
+              pattern="[A-Za-z0-9_]{4,20}"
+              title="Username must be 4 to 20 characters long and can contain only letters, numbers, and underscore."
             />
           </label>
 
@@ -173,6 +278,174 @@ export default function EnterDetailsPage() {
               value={formData.email}
               readOnly
               autoComplete="email"
+            />
+          </label>
+
+          <label className="field">
+            <span>Father&apos;s name</span>
+            <input
+              type="text"
+              name="fatherName"
+              placeholder="Enter your father's name"
+              value={formData.fatherName}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label className="field">
+            <span>Mother&apos;s name</span>
+            <input
+              type="text"
+              name="motherName"
+              placeholder="Enter your mother's name"
+              value={formData.motherName}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label className="field">
+            <span>Date of birth</span>
+            <input
+              type="date"
+              name="dob"
+              value={formData.dob}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label className="field">
+            <span>Institute / College</span>
+            <input
+              type="text"
+              name="institute"
+              placeholder="Enter your institute or college name"
+              value={formData.institute}
+              onChange={handleChange}
+            />
+          </label>
+
+          <h3 style={{ marginTop: "12px", marginBottom: "6px" }}>Current address</h3>
+
+          <label className="field">
+            <span>Address line 1</span>
+            <input
+              type="text"
+              name="currentAddressLine1"
+              placeholder="House no., street"
+              value={formData.currentAddressLine1}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label className="field">
+            <span>Address line 2 (optional)</span>
+            <input
+              type="text"
+              name="currentAddressLine2"
+              placeholder="Area, landmark"
+              value={formData.currentAddressLine2}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label className="field">
+            <span>City</span>
+            <input
+              type="text"
+              name="currentCity"
+              value={formData.currentCity}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label className="field">
+            <span>State</span>
+            <input
+              type="text"
+              name="currentState"
+              value={formData.currentState}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label className="field">
+            <span>Pincode</span>
+            <input
+              type="text"
+              name="currentPincode"
+              value={formData.currentPincode}
+              onChange={handleChange}
+            />
+          </label>
+
+          <div className="field" style={{ marginTop: "10px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <input
+                type="checkbox"
+                name="sameAsCurrent"
+                checked={formData.sameAsCurrent}
+                onChange={handleChange}
+              />
+              <span>Permanent address same as current</span>
+            </label>
+          </div>
+
+          <h3 style={{ marginTop: "6px", marginBottom: "6px" }}>Permanent address</h3>
+
+          <label className="field">
+            <span>Address line 1</span>
+            <input
+              type="text"
+              name="permanentAddressLine1"
+              placeholder="House no., street"
+              value={formData.permanentAddressLine1}
+              onChange={handleChange}
+              disabled={formData.sameAsCurrent}
+            />
+          </label>
+
+          <label className="field">
+            <span>Address line 2 (optional)</span>
+            <input
+              type="text"
+              name="permanentAddressLine2"
+              placeholder="Area, landmark"
+              value={formData.permanentAddressLine2}
+              onChange={handleChange}
+              disabled={formData.sameAsCurrent}
+            />
+          </label>
+
+          <label className="field">
+            <span>City</span>
+            <input
+              type="text"
+              name="permanentCity"
+              value={formData.permanentCity}
+              onChange={handleChange}
+              disabled={formData.sameAsCurrent}
+            />
+          </label>
+
+          <label className="field">
+            <span>State</span>
+            <input
+              type="text"
+              name="permanentState"
+              value={formData.permanentState}
+              onChange={handleChange}
+              disabled={formData.sameAsCurrent}
+            />
+          </label>
+
+          <label className="field">
+            <span>Pincode</span>
+            <input
+              type="text"
+              name="permanentPincode"
+              value={formData.permanentPincode}
+              onChange={handleChange}
+              disabled={formData.sameAsCurrent}
             />
           </label>
 

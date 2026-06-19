@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import api from "../quizApi"; // <-- use shared Axios instance
+import api from "../quizApi";
+
+const OTP_VALIDITY_SECONDS = 5 * 60; // 5 minutes
+const RESEND_COOLDOWN_SECONDS = 30; // resend cooldown
 
 export default function StudentSignupPage() {
   const navigate = useNavigate();
@@ -12,6 +15,48 @@ export default function StudentSignupPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+
+  const [otpTimeLeft, setOtpTimeLeft] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const formatTime = (seconds) => {
+    const safeSeconds = Math.max(0, seconds);
+    const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
+    const secs = String(safeSeconds % 60).padStart(2, "0");
+    return `${minutes}:${secs}`;
+  };
+
+  useEffect(() => {
+    if (otpTimeLeft <= 0) return;
+
+    const timerId = setInterval(() => {
+      setOtpTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerId);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [otpTimeLeft]);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timerId = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerId);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [resendCooldown]);
 
   const validateEmail = () => {
     const trimmedEmail = email.trim();
@@ -44,8 +89,13 @@ export default function StudentSignupPage() {
       return false;
     }
 
-    if (!/^\d{4,6}$/.test(trimmedOtp)) {
-      setError("Enter a valid OTP.");
+    if (!/^\d{6}$/.test(trimmedOtp)) {
+      setError("Enter a valid 6-digit OTP.");
+      return false;
+    }
+
+    if (otpTimeLeft <= 0) {
+      setError("OTP has expired. Please resend a new OTP.");
       return false;
     }
 
@@ -53,7 +103,7 @@ export default function StudentSignupPage() {
   };
 
   const handleSendOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     if (!validateEmail()) return;
 
@@ -64,17 +114,21 @@ export default function StudentSignupPage() {
       setError("");
       setSuccessMessage("");
 
-      // hits: https://quizmicroservice.onrender.com/api/auth/send-student-signup-otp
       await api.post("/auth/send-student-signup-otp", {
         email: normalizedEmail,
       });
 
       setOtpSent(true);
       setStep(2);
+      setOtp("");
+      setOtpTimeLeft(OTP_VALIDITY_SECONDS);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
       setSuccessMessage("OTP sent successfully to your Gmail.");
     } catch (err) {
+      const backendMessage = err?.response?.data?.message;
+
       setError(
-        err?.response?.data?.message ||
+        backendMessage ||
           "Unable to send OTP right now. Please try again."
       );
     } finally {
@@ -85,7 +139,7 @@ export default function StudentSignupPage() {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
 
-    if (!validateEmail() || !validateOtp()) return;
+    if (!validateOtp()) return;
 
     const normalizedEmail = email.trim().toLowerCase();
     const trimmedOtp = otp.trim();
@@ -95,7 +149,6 @@ export default function StudentSignupPage() {
       setError("");
       setSuccessMessage("");
 
-      // hits: https://quizmicroservice.onrender.com/api/auth/verify-student-signup-otp
       await api.post("/auth/verify-student-signup-otp", {
         email: normalizedEmail,
         otp: trimmedOtp,
@@ -126,9 +179,13 @@ export default function StudentSignupPage() {
     setStep(1);
     setOtp("");
     setOtpSent(false);
+    setOtpTimeLeft(0);
+    setResendCooldown(0);
     setError("");
     setSuccessMessage("");
   };
+
+  const isOtpExpired = step === 2 && otpTimeLeft === 0;
 
   return (
     <div className="auth-page">
@@ -189,21 +246,29 @@ export default function StudentSignupPage() {
               <input
                 type="text"
                 name="otp"
-                placeholder="Enter OTP"
+                placeholder="Enter 6-digit OTP"
                 value={otp}
                 onChange={(e) => {
-                  setOtp(e.target.value);
+                  setOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
                   setError("");
                   setSuccessMessage("");
                 }}
                 inputMode="numeric"
                 autoComplete="one-time-code"
+                disabled={isOtpExpired}
               />
             </label>
 
-            <p className="auth-helper">
-              Enter the OTP sent to your Gmail to continue to the student details page.
-            </p>
+            <div className="auth-helper">
+              <p>
+                OTP valid for: <strong>{formatTime(otpTimeLeft)}</strong>
+              </p>
+              <p>
+                {isOtpExpired
+                  ? "Your OTP has expired. Please resend a new OTP."
+                  : "Enter the OTP sent to your Gmail to continue to the student details page."}
+              </p>
+            </div>
 
             {error && (
               <div className="error-box" role="alert" aria-live="assertive">
@@ -230,7 +295,7 @@ export default function StudentSignupPage() {
               <button
                 className="primary-btn auth-inline-btn"
                 type="submit"
-                disabled={loading}
+                disabled={loading || isOtpExpired}
               >
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
@@ -241,9 +306,11 @@ export default function StudentSignupPage() {
                 className="secondary-btn auth-resend-btn"
                 type="button"
                 onClick={handleSendOtp}
-                disabled={loading}
+                disabled={loading || resendCooldown > 0}
               >
-                Resend OTP
+                {resendCooldown > 0
+                  ? `Resend OTP in ${formatTime(resendCooldown)}`
+                  : "Resend OTP"}
               </button>
             )}
           </form>

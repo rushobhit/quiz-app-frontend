@@ -17,6 +17,7 @@ export function ThemeProvider({ children }) {
   });
 
   useEffect(() => {
+    // 1) persist to localStorage
     try {
       localStorage.setItem(THEME_KEY, theme);
     } catch {
@@ -24,8 +25,16 @@ export function ThemeProvider({ children }) {
     }
 
     if (typeof document !== "undefined") {
-      document.body.classList.remove("theme-light", "theme-dark");
-      document.body.classList.add(`theme-${theme}`);
+      const body = document.body;
+      const html = document.documentElement;
+
+      // 2) body classes for your existing CSS
+      body.classList.remove("theme-light", "theme-dark");
+      body.classList.add(`theme-${theme}`);
+
+      // 3) data-theme attribute for new header CSS
+      body.setAttribute("data-theme", theme);
+      html.setAttribute("data-theme", theme);
     }
   }, [theme]);
 
