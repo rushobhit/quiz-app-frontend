@@ -15,52 +15,10 @@ export default function StudentSignupPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [demoModal, setDemoModal] = useState({
-    isOpen: false,
-    provider: "",
-  });
 
 
 
   const handleSocialLoginClick = (provider) => {
-    setDemoModal({
-      isOpen: true,
-      provider: provider
-    });
-  };
-
-  const handleSimulateLogin = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const providerName = demoModal.provider;
-      setDemoModal({ isOpen: false, provider: "" });
-
-      const mockEmail = `demo.${providerName}@quizapp.com`;
-      const mockName = `Demo ${providerName.charAt(0).toUpperCase() + providerName.slice(1)} User`;
-
-      const response = await socialLoginMock(mockEmail, mockName, providerName);
-      const data = response.data;
-
-      if (data?.token) localStorage.setItem("token", data.token);
-      if (data?.user) localStorage.setItem("user", JSON.stringify(data.user));
-      if (data?.role) localStorage.setItem("role", data.role);
-
-      navigate("/select-quiz", { replace: true });
-    } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          "Mock login failed. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRealOAuthRedirect = () => {
-    const provider = demoModal.provider;
-    setDemoModal({ isOpen: false, provider: "" });
-
     const baseAppUrl = `${window.location.origin}${import.meta.env.BASE_URL || "/"}`;
 
     if (provider === "google") {
@@ -416,89 +374,6 @@ export default function StudentSignupPage() {
         </div>
       </div>
     </div>
-
-    {/* Demo simulation modal */}
-    {demoModal.isOpen && (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(5px)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 9999
-      }}>
-        <div style={{
-          backgroundColor: '#fff',
-          padding: '30px',
-          borderRadius: '12px',
-          maxWidth: '450px',
-          width: '90%',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-          textAlign: 'center'
-        }}>
-          <h3 style={{ fontSize: '1.4rem', color: '#01696f', marginBottom: '15px' }}>
-            Connect to {demoModal.provider.charAt(0).toUpperCase() + demoModal.provider.slice(1)}
-          </h3>
-          <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '20px', lineHeight: '1.5' }}>
-            Social OAuth requires registering Developer Credentials (Client ID) in your environment. 
-            To test the flow immediately, select <strong>Simulate Success</strong>. To connect via real OAuth, select <strong>Real Connection</strong>.
-          </p>
-          <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-            <button
-              type="button"
-              onClick={handleSimulateLogin}
-              style={{
-                padding: '12px',
-                backgroundColor: '#01696f',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'background-color 0.3s'
-              }}
-            >
-              🚀 Simulate Success (Student)
-            </button>
-            <button
-              type="button"
-              onClick={handleRealOAuthRedirect}
-              style={{
-                padding: '12px',
-                backgroundColor: '#f0f0f0',
-                color: '#333',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'background-color 0.3s'
-              }}
-            >
-              🔗 Real Connection
-            </button>
-            <button
-              type="button"
-              onClick={() => setDemoModal({ isOpen: false, provider: "" })}
-              style={{
-                padding: '10px',
-                backgroundColor: 'transparent',
-                color: '#888',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.9rem'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
   </>
   );
 }
