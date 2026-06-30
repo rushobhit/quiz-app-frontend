@@ -1,9 +1,9 @@
 import axios from "axios";
 import { clearAuth } from "./utils/authStorage";
 
-// For LOCAL development
-const API_BASE ="https://quiz-app-backend-sus3.onrender.com";
-  const api = axios.create({
+// For LOCAL and PRODUCTION environment variables
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const api = axios.create({
   baseURL: API_BASE,
   headers: {
     "Content-Type": "application/json",
@@ -135,5 +135,25 @@ export const updateStudent = (id, payload) =>
 
 export const deleteStudent = (id) =>
   api.delete(`/api/admin/students/${id}`);
+
+// Recovery helpers
+export const forgotPassword = (identifierType, identifier, dob) =>
+  api.post("/auth/forgot-password", { identifierType, identifier, dob });
+
+export const forgotUsername = (email, dob) =>
+  api.post("/auth/forgot-username", { email, dob });
+
+export const resetPassword = (token, newPassword) =>
+  api.post("/auth/reset-password", { token, newPassword });
+
+// Social logins
+export const googleLogin = (code, redirectUri) =>
+  api.post("/auth/google-login", { code, redirectUri });
+
+export const githubLogin = (code) =>
+  api.post("/auth/github-login", { code });
+
+export const socialLoginMock = (email, name, provider) =>
+  api.post("/auth/social-login-mock", { email, name, provider });
 
 export default api;

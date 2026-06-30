@@ -8,6 +8,7 @@ import EnterDetailsPage from "./pages/EnterDetailsPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import StudentLayout from "./layouts/StudentLayout";
 import InstructionsPage from "./pages/InstructionsPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 
 function getAuthState() {
   const token = localStorage.getItem("token");
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/" element={<LoginPage />} />
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/signup" element={<StudentSignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
 
       <Route path="/enter-details" element={<EnterDetailsPage />} />
