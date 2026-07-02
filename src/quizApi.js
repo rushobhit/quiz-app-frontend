@@ -2,7 +2,7 @@ import axios from "axios";
 import { clearAuth } from "./utils/authStorage";
 
 // For LOCAL and PRODUCTION environment variables
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://quiz-app-backend-sus3.onrender.com";
 const api = axios.create({
   baseURL: API_BASE,
   headers: {
