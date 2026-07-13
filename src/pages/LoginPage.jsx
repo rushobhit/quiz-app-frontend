@@ -283,6 +283,7 @@ export default function LoginPage() {
           </form>
 
           {/* Social login buttons */}
+{/*
           <div className="social-divider">
             <div></div>
             <span>or continue with</span>
@@ -326,6 +327,7 @@ export default function LoginPage() {
               </Link>
             </p>
           </div>
+          */}
         </div>
       </div>
     </>

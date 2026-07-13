@@ -1,6 +1,6 @@
 import { useTheme } from "../context/ThemeContext";
 
-const SUBJECT_OPTIONS = ["Java", "Python", "JavaScript", "DBMS", "OS", "CN"];
+const SUBJECT_OPTIONS = ["Java", "Python", "CPP", "JavaScript", "DBMS", "SQL", "OS", "CN", "Teaching Aptitude", "Research Aptitude"];
 const DIFFICULTY_OPTIONS = ["EASY", "MODERATE", "HARD"];
 
 export default function StartPanel({
